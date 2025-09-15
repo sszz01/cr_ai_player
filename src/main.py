@@ -15,7 +15,6 @@ def main():
             img = np.array(screenshot)
             img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
             cv2.imshow("My screen", img)
-            cv2.putText(img, f"FPS: {fps: .2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
             n_frames += 1
             t1 = time.time()
