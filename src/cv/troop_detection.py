@@ -16,7 +16,6 @@ params = dict(
     lr0=0.001,
     auto_augment=None,
     mosaic=0.0,
-    resume=False,
     seed=42
 )
 
@@ -47,23 +46,35 @@ def set_params():
                 # optimizations for MPS (Apple Silicon)
                 torch.mps.empty_cache()
                 params["device"] = "mps"
-                params["batch"] = 4
+                params["batch"] = 8
                 params["imgsz"] = 640
                 params["cache"] = False
-                params["workers"] = 0
+                # params["workers"] = 0
                 params["patience"] = 50  # add early stopping
                 break
             else:
                 print("MPS is not available on your device. Please choose another device.")
         else:
             print("Invalid choice. Please enter 1, 2, or 3.")
+
+    while True:
+        resume = input("resume training from a previous checkpoint? (y/n): ")
+        if resume.lower().strip() == "y":
+            params["resume"] = True
+            break
+        elif resume.lower().strip() == "n":
+            params["resume"] = False
+            break
+        else:
+            print("Invalid choice. Please enter y or n.")
+
 set_params()
 
 if not os.path.exists(params["data"]):
     print(f"Error: Data file not found at {params['data']}")
 else:
     try:
-        model = YOLO("../../runs/detect/train2/weights/last.pt")
+        model = YOLO("../../runs/detect/train3/weights/last.pt")
         results = model.train(**params)
     except Exception as e:
         print(f"An error occurred during training: {e}")

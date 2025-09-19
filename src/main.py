@@ -2,6 +2,7 @@ import cv2
 from mss import mss
 import numpy as np
 import time
+from ultralytics import YOLO
 
 def find_game_window(sct):
     offset_x, offset_y = (140, 636)  # offset from the top-left corner of the iphone screen to battle button
@@ -39,6 +40,8 @@ def main():
     t0 = time.time()
     n_frames = 0
 
+    model = YOLO("../runs/detect/train3/weights/last.pt")
+
     with mss() as sct:
         game_window = find_game_window(sct)
         if not game_window:
@@ -48,7 +51,12 @@ def main():
         while True:
             game_screenshot = sct.grab(game_window)
             game_img = np.array(game_screenshot)
-            cv2.imshow("My screen", game_img)
+            game_img_bgr = cv2.cvtColor(game_img, cv2.COLOR_BGRA2BGR)
+
+            results = model.predict(game_img_bgr, verbose=False)
+            annotated_frame = results[0].plot()
+
+            cv2.imshow("My screen", annotated_frame)
 
             n_frames += 1
             t1 = time.time()
