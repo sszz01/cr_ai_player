@@ -164,3 +164,4 @@ cython_debug/
 src/cv/models
 src/cv/datasets
 runs/
+src/cv/games_footage

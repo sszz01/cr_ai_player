@@ -40,7 +40,7 @@ def main():
     t0 = time.time()
     n_frames = 0
 
-    model = YOLO("../runs/detect/train3/weights/last.pt")
+    model = YOLO("./cv/runs/detect/train2/weights/last.pt")
 
     with mss() as sct:
         game_window = find_game_window(sct)
