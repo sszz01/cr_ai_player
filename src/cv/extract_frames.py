@@ -56,5 +56,5 @@ def extract_frames(video_path, output_folder, frame_rate=1):
 
 if __name__ == "__main__":
     vpath = "games_footage"
-    out_dir = "../extracted_frames"
+    out_dir = "extracted_frames"
     extract_frames(vpath, out_dir, frame_rate=1)

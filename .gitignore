@@ -165,3 +165,4 @@ src/cv/models
 src/cv/datasets
 runs/
 src/cv/games_footage
+src/cv/extracted_frames
