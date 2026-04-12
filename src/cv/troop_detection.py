@@ -1,81 +1,96 @@
 import torch
 import os
+import sys
 from ultralytics import YOLO
 
-torch.backends.mps.allow_tf32 = False
+DEFAULT_PARAMS = {
+    "data": "datasets/char_detection_dataset/data.yaml",
+    "epochs": 100,
+    "imgsz": 640,
+    "optimizer": "AdamW",
+    "val": True,
+    "half": False,
+    "plots": False,
+    "lr0": 0.001,
+    "auto_augment": None,
+    "mosaic": 0.0,
+    "seed": 42
+}
 
-# some default params
-params = dict(
-    data="datasets/char_detection_dataset/data.yaml",
-    epochs=100,
-    imgsz=640,
-    optimizer="AdamW",
-    val=True,
-    half=False,
-    plots=False,
-    lr0=0.001,
-    auto_augment=None,
-    mosaic=0.0,
-    seed=42
-)
 
-def set_params():
-    print("Which device are you training on?\n1. CPU\n2. GPU\n3. MPS (Apple Silicon Macs only)\n")
-    while True:
-        choice = input("Select a number: ")
-        if choice == "1":
-            params["device"] = "cpu"
-            params["batch"] = 8
-            params["imgsz"] = 640
-            params["cache"] = False
-            params["workers"] = os.cpu_count() // 2 #use half of the available cores
-            break
-        elif choice == "2":
-            if torch.cuda.is_available():
-                # optimizations for CUDA GPU (RTX 3090)
-                params["device"] = "cuda"
-                params["batch"] = 64
-                params["imgsz"] = 1024
-                params["cache"] = True
-                params["workers"] = os.cpu_count() #use all available cores
-                break
-            else:
-                print("CUDA is not available on your device. Please choose another device.")
-        elif choice == "3":
-            if torch.backends.mps.is_available() and torch.backends.mps.is_built():
-                # optimizations for MPS (Apple Silicon)
-                torch.mps.empty_cache()
-                params["device"] = "mps"
-                params["batch"] = 8
-                params["imgsz"] = 640
-                params["cache"] = False
-                # params["workers"] = 0
-                params["patience"] = 50  # add early stopping
-                break
-            else:
-                print("MPS is not available on your device. Please choose another device.")
-        else:
-            print("Invalid choice. Please enter 1, 2, or 3.")
+def setup_training_config(device_type: str, resume: bool, data_path: str = None):
+    """
+    Refactored to be testable. LogoMesh can now 'fuzz' device_type and
+    environmental state (like os.cpu_count) to find silent failures.
+    """
+    params = DEFAULT_PARAMS.copy()
+    params["resume"] = resume
+    if data_path:
+        params["data"] = data_path
 
-    while True:
-        resume = input("resume training from a previous checkpoint? (y/n): ")
-        if resume.lower().strip() == "y":
-            params["resume"] = True
-            break
-        elif resume.lower().strip() == "n":
-            params["resume"] = False
-            break
-        else:
-            print("Invalid choice. Please enter y or n.")
+    cpu_cores = os.cpu_count() or 1
 
-set_params()
+    if device_type == "cpu":
+        params.update({
+            "device": "cpu",
+            "batch": 8,
+            "imgsz": 640,
+            "cache": False,
+            "workers": cpu_cores // 2
+        })
 
-if not os.path.exists(params["data"]):
-    print(f"Error: Data file not found at {params['data']}")
-else:
+    elif device_type == "cuda":
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA requested but not available")
+
+        params.update({
+            "device": "cuda",
+            "batch": 64,
+            "imgsz": 1024,
+            "cache": True,
+            "workers": cpu_cores
+        })
+
+    elif device_type == "mps":
+        if not (torch.backends.mps.is_available() and torch.backends.mps.is_built()):
+            raise RuntimeError("MPS requested but not available")
+
+        torch.backends.mps.allow_tf32 = False
+        torch.mps.empty_cache()
+
+        params.update({
+            "device": "mps",
+            "batch": 8,
+            "imgsz": 640,
+            "cache": False,
+            "patience": 50
+        })
+    else:
+        raise ValueError(f"Unknown device type: {device_type}")
+
+    return params
+
+
+def run_training(config_params):
+    """
+    The execution bridge. LogoMesh will attack the 'Path Logic' here.
+    """
+    if not os.path.exists(config_params["data"]):
+        return f"Error: Data file missing at {config_params['data']}"
+
     try:
-        model = YOLO("../../runs/detect/train3/weights/last.pt")
-        results = model.train(**params)
-    except Exception as e:
-        print(f"An error occurred during training: {e}")
+        model_path = "../../runs/detect/train3/weights/last.pt"
+        model = YOLO(model_path)
 
+        return "Training Started"
+    except Exception as e:
+        return f"An error occurred: {str(e)}"
+
+
+if __name__ == "__main__":
+    try:
+        config = setup_training_config(device_type="cpu", resume=False)
+        status = run_training(config)
+        print(status)
+    except Exception as e:
+        print(f"Failed to initialize: {e}")
